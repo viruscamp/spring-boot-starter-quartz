@@ -83,14 +83,12 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withDatabase() throws Exception {
-		registerAndRefresh(EmbeddedDataSourceConfiguration.class,
-				DataSourceTransactionManagerAutoConfiguration.class,
+		registerAndRefresh(EmbeddedDataSourceConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class,
 				QuartzAutoConfiguration.class);
 		Scheduler scheduler = this.context.getBean(Scheduler.class);
 
 		assertThat(scheduler).isNotNull();
-		assertThat(scheduler.getMetaData().getJobStoreClass())
-				.isAssignableFrom(LocalDataSourceJobStore.class);
+		assertThat(scheduler.getMetaData().getJobStoreClass()).isAssignableFrom(LocalDataSourceJobStore.class);
 	}
 
 	@Test
@@ -99,24 +97,21 @@ public class QuartzAutoConfigurationTests {
 		Scheduler scheduler = this.context.getBean(Scheduler.class);
 
 		assertThat(scheduler).isNotNull();
-		assertThat(scheduler.getMetaData().getJobStoreClass())
-				.isAssignableFrom(RAMJobStore.class);
+		assertThat(scheduler.getMetaData().getJobStoreClass()).isAssignableFrom(RAMJobStore.class);
 	}
 
 	@Test
 	public void withTaskExecutor() throws Exception {
-		registerAndRefresh(QuartzAutoConfiguration.class,
-				QuartzExecutorConfiguration.class);
+		registerAndRefresh(QuartzAutoConfiguration.class, QuartzExecutorConfiguration.class);
 		Scheduler scheduler = this.context.getBean(Scheduler.class);
 
 		assertThat(scheduler).isNotNull();
-		assertThat(scheduler.getMetaData().getThreadPoolClass())
-				.isEqualTo(LocalTaskExecutorThreadPool.class);
+		assertThat(scheduler.getMetaData().getThreadPoolClass()).isEqualTo(LocalTaskExecutorThreadPool.class);
 	}
 
 	@Test
 	public void withConfiguredJobAndTrigger() throws Exception {
-		EnvironmentTestUtils.addEnvironment(context,"test-name=withConfiguredJobAndTrigger");
+		EnvironmentTestUtils.addEnvironment(context, "test-name=withConfiguredJobAndTrigger");
 		registerAndRefresh(QuartzAutoConfiguration.class, QuartzJobConfiguration.class);
 		Scheduler scheduler = this.context.getBean(Scheduler.class);
 
@@ -128,8 +123,7 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withConfiguredCalendars() throws Exception {
-		registerAndRefresh(QuartzAutoConfiguration.class,
-				QuartzCalendarsConfiguration.class);
+		registerAndRefresh(QuartzAutoConfiguration.class, QuartzCalendarsConfiguration.class);
 		Scheduler scheduler = this.context.getBean(Scheduler.class);
 
 		assertThat(scheduler.getCalendar("weekly")).isNotNull();
@@ -165,17 +159,16 @@ public class QuartzAutoConfigurationTests {
 
 		@Bean
 		public JobDetail fooJob() {
-			return JobBuilder.newJob().ofType(FooJob.class).withIdentity("fooJob")
-					.storeDurably().build();
+			return JobBuilder.newJob().ofType(FooJob.class).withIdentity("fooJob").storeDurably().build();
 		}
 
 		@Bean
 		public Trigger fooTrigger() {
-			SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-					.withIntervalInSeconds(10).repeatForever();
+			SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(10)
+					.repeatForever();
 
-			return TriggerBuilder.newTrigger().forJob(fooJob()).withIdentity("fooTrigger")
-					.withSchedule(scheduleBuilder).build();
+			return TriggerBuilder.newTrigger().forJob(fooJob()).withIdentity("fooTrigger").withSchedule(scheduleBuilder)
+					.build();
 		}
 
 	}
@@ -226,8 +219,7 @@ public class QuartzAutoConfigurationTests {
 		private Environment env;
 
 		@Override
-		protected void executeInternal(JobExecutionContext context)
-				throws JobExecutionException {
+		protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
 			System.out.println(this.env.getProperty("test-name", "unknown"));
 		}
 

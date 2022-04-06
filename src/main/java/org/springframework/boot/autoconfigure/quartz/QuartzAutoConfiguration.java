@@ -54,111 +54,105 @@ import org.springframework.transaction.PlatformTransactionManager;
  * @since 2.0.0
  */
 @Configuration
-@ConditionalOnClass({ Scheduler.class, SchedulerFactoryBean.class,
-        PlatformTransactionManager.class })
+@ConditionalOnClass({ Scheduler.class, SchedulerFactoryBean.class, PlatformTransactionManager.class })
 @EnableConfigurationProperties(QuartzProperties.class)
-@AutoConfigureAfter({ DataSourceAutoConfiguration.class,
-        HibernateJpaAutoConfiguration.class })
+@AutoConfigureAfter({ DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class })
 public class QuartzAutoConfiguration implements ApplicationContextAware {
 
-    private final QuartzProperties properties;
+	private final QuartzProperties properties;
 
-    private final List<SchedulerFactoryBeanCustomizer> customizers;
+	private final List<SchedulerFactoryBeanCustomizer> customizers;
 
-    private final Executor taskExecutor;
+	private final Executor taskExecutor;
 
-    private final JobDetail[] jobDetails;
+	private final JobDetail[] jobDetails;
 
-    private final Map<String, Calendar> calendars;
+	private final Map<String, Calendar> calendars;
 
-    private final Trigger[] triggers;
+	private final Trigger[] triggers;
 
-    private ApplicationContext applicationContext;
+	private ApplicationContext applicationContext;
 
-    public QuartzAutoConfiguration(QuartzProperties properties,
-                                   ObjectProvider<List<SchedulerFactoryBeanCustomizer>> customizers,
-                                   ObjectProvider<Executor> taskExecutor, ObjectProvider<JobDetail[]> jobDetails,
-                                   ObjectProvider<Map<String, Calendar>> calendars,
-                                   ObjectProvider<Trigger[]> triggers) {
-        this.properties = properties;
-        this.customizers = customizers.getIfAvailable();
-        this.taskExecutor = taskExecutor.getIfAvailable();
-        this.jobDetails = jobDetails.getIfAvailable();
-        this.calendars = calendars.getIfAvailable();
-        this.triggers = triggers.getIfAvailable();
-    }
+	public QuartzAutoConfiguration(QuartzProperties properties,
+			ObjectProvider<List<SchedulerFactoryBeanCustomizer>> customizers, ObjectProvider<Executor> taskExecutor,
+			ObjectProvider<JobDetail[]> jobDetails, ObjectProvider<Map<String, Calendar>> calendars,
+			ObjectProvider<Trigger[]> triggers) {
+		this.properties = properties;
+		this.customizers = customizers.getIfAvailable();
+		this.taskExecutor = taskExecutor.getIfAvailable();
+		this.jobDetails = jobDetails.getIfAvailable();
+		this.calendars = calendars.getIfAvailable();
+		this.triggers = triggers.getIfAvailable();
+	}
 
-    @Bean
-    @ConditionalOnBean(DataSource.class)
-    @ConditionalOnMissingBean
-    public QuartzDatabaseInitializer quartzDatabaseInitializer(DataSource dataSource,
-                                                               ResourceLoader resourceLoader) {
-        return new QuartzDatabaseInitializer(dataSource, resourceLoader, this.properties);
-    }
+	@Bean
+	@ConditionalOnBean(DataSource.class)
+	@ConditionalOnMissingBean
+	public QuartzDatabaseInitializer quartzDatabaseInitializer(DataSource dataSource, ResourceLoader resourceLoader) {
+		return new QuartzDatabaseInitializer(dataSource, resourceLoader, this.properties);
+	}
 
-    @Bean
-    @ConditionalOnMissingBean
-    public SchedulerFactoryBean schedulerFactoryBean() {
-        SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
-        schedulerFactoryBean.setJobFactory(new AutowireCapableBeanJobFactory(
-                this.applicationContext.getAutowireCapableBeanFactory()));
-        if (!this.properties.getProperties().isEmpty()) {
-            schedulerFactoryBean
-                    .setQuartzProperties(asProperties(this.properties.getProperties()));
-        }
-        if (this.taskExecutor != null) {
-            schedulerFactoryBean.setTaskExecutor(this.taskExecutor);
-        }
-        if (this.jobDetails != null && this.jobDetails.length > 0) {
-            schedulerFactoryBean.setJobDetails(this.jobDetails);
-        }
-        if (this.calendars != null && !this.calendars.isEmpty()) {
-            schedulerFactoryBean.setCalendars(this.calendars);
-        }
-        if (this.triggers != null && this.triggers.length > 0) {
-            schedulerFactoryBean.setTriggers(this.triggers);
-        }
-        customize(schedulerFactoryBean);
-        return schedulerFactoryBean;
-    }
+	@Bean
+	@ConditionalOnMissingBean
+	public SchedulerFactoryBean schedulerFactoryBean() {
+		SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
+		schedulerFactoryBean.setJobFactory(
+				new AutowireCapableBeanJobFactory(this.applicationContext.getAutowireCapableBeanFactory()));
+		if (!this.properties.getProperties().isEmpty()) {
+			schedulerFactoryBean.setQuartzProperties(asProperties(this.properties.getProperties()));
+		}
+		if (this.taskExecutor != null) {
+			schedulerFactoryBean.setTaskExecutor(this.taskExecutor);
+		}
+		if (this.jobDetails != null && this.jobDetails.length > 0) {
+			schedulerFactoryBean.setJobDetails(this.jobDetails);
+		}
+		if (this.calendars != null && !this.calendars.isEmpty()) {
+			schedulerFactoryBean.setCalendars(this.calendars);
+		}
+		if (this.triggers != null && this.triggers.length > 0) {
+			schedulerFactoryBean.setTriggers(this.triggers);
+		}
+		customize(schedulerFactoryBean);
+		return schedulerFactoryBean;
+	}
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext)
-            throws BeansException {
-        this.applicationContext = applicationContext;
-    }
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
+	}
 
-    private Properties asProperties(Map<String, String> source) {
-        Properties properties = new Properties();
-        properties.putAll(source);
-        return properties;
-    }
+	private Properties asProperties(Map<String, String> source) {
+		Properties properties = new Properties();
+		properties.putAll(source);
+		return properties;
+	}
 
-    private void customize(SchedulerFactoryBean schedulerFactoryBean) {
-        if (this.customizers != null) {
-            AnnotationAwareOrderComparator.sort(this.customizers);
-            for (SchedulerFactoryBeanCustomizer customizer : this.customizers) {
-                customizer.customize(schedulerFactoryBean);
-            }
-        }
-    }
+	private void customize(SchedulerFactoryBean schedulerFactoryBean) {
+		if (this.customizers != null) {
+			AnnotationAwareOrderComparator.sort(this.customizers);
+			for (SchedulerFactoryBeanCustomizer customizer : this.customizers) {
+				customizer.customize(schedulerFactoryBean);
+			}
+		}
+	}
 
-    @Configuration
-    @ConditionalOnBean(DataSource.class)
-    protected static class QuartzSchedulerDataSourceConfiguration {
+	@Configuration
+	@ConditionalOnBean(DataSource.class)
+	protected static class QuartzSchedulerDataSourceConfiguration {
 
-        @Bean
-        public SchedulerFactoryBeanCustomizer dataSourceCustomizer(final DataSource dataSource,
-                                                                   final PlatformTransactionManager transactionManager) {
-            return new SchedulerFactoryBeanCustomizer() {
-                @Override
-                public void customize(SchedulerFactoryBean schedulerFactoryBean) {
-                    schedulerFactoryBean.setDataSource(dataSource);
-                    schedulerFactoryBean.setTransactionManager(transactionManager);
-                }
-            };
-        }
+		@Bean
+		public SchedulerFactoryBeanCustomizer dataSourceCustomizer(final DataSource dataSource,
+				final PlatformTransactionManager transactionManager) {
+			return new SchedulerFactoryBeanCustomizer() {
+				@Override
+				public void customize(SchedulerFactoryBean schedulerFactoryBean) {
+					schedulerFactoryBean.setDataSource(dataSource);
+					schedulerFactoryBean.setTransactionManager(transactionManager);
+				}
+			};
+		}
 
-    }
+	}
 
 }

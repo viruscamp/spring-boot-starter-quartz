@@ -28,6 +28,6 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
  */
 public interface SchedulerFactoryBeanCustomizer {
 
-    void customize(SchedulerFactoryBean schedulerFactoryBean);
+	void customize(SchedulerFactoryBean schedulerFactoryBean);
 
 }

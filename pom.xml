@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starters</artifactId>
-		<version>1.5.8.RELEASE</version>
+		<version>1.5.22.RELEASE</version>
 	</parent>
 	<artifactId>spring-boot-starter-quartz</artifactId>
 	<name>Spring Boot Quartz Starter</name>
@@ -16,6 +16,9 @@
 	</organization>
 	<properties>
 		<main.basedir>${basedir}/../..</main.basedir>
+		<disable.checks>true</disable.checks>
+
+		<quartz.version>2.3.2</quartz.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -33,7 +36,7 @@
 		<dependency>
 			<groupId>org.quartz-scheduler</groupId>
 			<artifactId>quartz</artifactId>
-			<version>2.3.0</version>
+			<version>${quartz.version}</version>
 		</dependency>
 
 		<dependency>

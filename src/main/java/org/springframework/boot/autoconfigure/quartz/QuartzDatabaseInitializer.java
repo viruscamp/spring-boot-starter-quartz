@@ -30,41 +30,41 @@ import org.springframework.util.Assert;
  */
 public class QuartzDatabaseInitializer extends AbstractDatabaseInitializer {
 
-    private final QuartzProperties properties;
+	private final QuartzProperties properties;
 
-    public QuartzDatabaseInitializer(DataSource dataSource, ResourceLoader resourceLoader,
-                                     QuartzProperties properties) {
-        super(dataSource, resourceLoader);
-        Assert.notNull(properties, "QuartzProperties must not be null");
-        this.properties = properties;
-    }
+	public QuartzDatabaseInitializer(DataSource dataSource, ResourceLoader resourceLoader,
+			QuartzProperties properties) {
+		super(dataSource, resourceLoader);
+		Assert.notNull(properties, "QuartzProperties must not be null");
+		this.properties = properties;
+	}
 
-    @Override
-    protected boolean isEnabled() {
-        return this.properties.getInitializer().isEnabled();
-    }
+	@Override
+	protected boolean isEnabled() {
+		return this.properties.getInitializer().isEnabled();
+	}
 
-    @Override
-    protected String getSchemaLocation() {
-        return this.properties.getSchema();
-    }
+	@Override
+	protected String getSchemaLocation() {
+		return this.properties.getSchema();
+	}
 
-    @Override
-    protected String getDatabaseName() {
-        String databaseName = super.getDatabaseName();
-        if ("db2".equals(databaseName)) {
-            return "db2_v95";
-        }
-        if ("mysql".equals(databaseName)) {
-            return "mysql_innodb";
-        }
-        if ("postgresql".equals(databaseName)) {
-            return "postgres";
-        }
-        if ("sqlserver".equals(databaseName)) {
-            return "sqlServer";
-        }
-        return databaseName;
-    }
+	@Override
+	protected String getDatabaseName() {
+		String databaseName = super.getDatabaseName();
+		if ("db2".equals(databaseName)) {
+			return "db2_v95";
+		}
+		if ("mysql".equals(databaseName)) {
+			return "mysql_innodb";
+		}
+		if ("postgresql".equals(databaseName)) {
+			return "postgres";
+		}
+		if ("sqlserver".equals(databaseName)) {
+			return "sqlServer";
+		}
+		return databaseName;
+	}
 
 }
