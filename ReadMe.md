@@ -1,5 +1,5 @@
 # Spring Boot Quartz Starter for spring-boot-1.5.x
-[![Build Status](https://travis-ci.org/viruscamp/spring-boot-starter-quartz.svg?branch=master)](https://travis-ci.org/viruscamp/spring-boot-starter-quartz)
+![Build Status](https://github.com/viruscamp/spring-boot-starter-quartz/actions/workflows/maven.yml/badge.svg)
 [![License](http://img.shields.io/:license-Apache%202-red.svg)](LICENSE.txt)
 
 This is backport of spring-boot-starter-quartz from spring-boot-2.6.6 to spring-boot-1.5.x .  

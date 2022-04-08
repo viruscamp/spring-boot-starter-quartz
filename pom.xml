@@ -14,6 +14,14 @@
 	<description>Spring Boot Quartz Starter for spring-boot-1.5.x, backport from spring-boot-2.6.6</description>
 	<url>https://github.com/viruscamp/spring-boot-starter-quartz</url>
 
+	<distributionManagement>
+		<repository>
+			<id>github</id>
+			<name>GitHub Packages</name>
+			<url>https://maven.pkg.github.com/viruscamp/spring-boot-starter-quartz</url>
+		</repository>
+	</distributionManagement>
+
 	<properties>
 		<java.version>1.8</java.version>
 		<disable.checks>true</disable.checks>
