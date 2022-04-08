@@ -9,10 +9,4 @@ Main codes are from [spring-boot-autoconfigure/main/quartz](https://github.com/s
 
 Test codes are from [spring-boot-autoconfigure/test/quartz](https://github.com/spring-projects/spring-boot/tree/v2.6.6/spring-boot-project/spring-boot-autoconfigure/src/test/java/org/springframework/boot/autoconfigure/quartz) .
 
-For the use of `DataSourceScriptDatabaseInitializer`, codes have been backported from:
-- [org.springframework.boot.util](https://github.com/spring-projects/spring-boot/tree/v2.6.6/spring-boot-project/spring-boot/src/main/java/org/springframework/boot/util)
-- [org.springframework.boot.sql.init](https://github.com/spring-projects/spring-boot/tree/v2.6.6/spring-boot-project/spring-boot/src/main/java/org/springframework/boot/sql/init)
-- [org.springframework.boot.jdbc.init](https://github.com/spring-projects/spring-boot/tree/v2.6.6/spring-boot-project/spring-boot/src/main/java/org/springframework/boot/jdbc/init)
-- [org.springframework.boot.autoconfigure.sql.init](https://github.com/spring-projects/spring-boot/tree/v2.6.6/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/sql/init)
-
 For the use of `QuartzDatabaseInitializer`, we made `AbstractEnhancedDatabaseInitializer` as an enhanced copy of [AbstractDatabaseInitializer](https://github.com/spring-projects/spring-boot/blob/v1.5.22.RELEASE/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/AbstractDatabaseInitializer.java).

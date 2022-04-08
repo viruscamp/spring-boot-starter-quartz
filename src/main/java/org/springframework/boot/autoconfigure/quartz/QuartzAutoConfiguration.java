@@ -34,7 +34,6 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.autoconfigure.sql.init.OnDatabaseInitializationCondition;
-import org.springframework.boot.sql.init.dependency.DatabaseInitializationDependencyConfigurer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.*;
@@ -111,7 +110,6 @@ public class QuartzAutoConfiguration {
 	@AutoConfigureBefore(QuartzAutoConfiguration.class)
 	@ConditionalOnSingleCandidate(DataSource.class)
 	@ConditionalOnProperty(prefix = "spring.quartz", name = "job-store-type", havingValue = "jdbc")
-	@Import(DatabaseInitializationDependencyConfigurer.class)
 	protected static class JdbcStoreTypeConfiguration {
 
 		@Bean
@@ -156,16 +154,6 @@ public class QuartzAutoConfiguration {
 				QuartzProperties properties) {
 			DataSource dataSourceToUse = getDataSource(dataSource, quartzDataSource);
 			return new QuartzDatabaseInitializer(dataSourceToUse, resourceLoader, properties);
-		}
-
-		@Bean
-		@ConditionalOnMissingBean(QuartzDataSourceScriptDatabaseInitializer.class)
-		@Conditional(OnQuartzDatasourceInitializationCondition.class)
-		public QuartzDataSourceScriptDatabaseInitializer quartzDataSourceScriptDatabaseInitializer(
-				DataSource dataSource, @QuartzDataSource ObjectProvider<DataSource> quartzDataSource,
-				QuartzProperties properties) {
-			DataSource dataSourceToUse = getDataSource(dataSource, quartzDataSource);
-			return new QuartzDataSourceScriptDatabaseInitializer(dataSourceToUse, properties);
 		}
 
 		static class OnQuartzDatasourceInitializationCondition extends OnDatabaseInitializationCondition {
