@@ -18,9 +18,15 @@ package org.springframework.boot.autoconfigure.quartz;
 
 import javax.sql.DataSource;
 
-import org.springframework.boot.autoconfigure.AbstractDatabaseInitializer;
+import org.springframework.boot.autoconfigure.sql.init.AbstractEnhancedDatabaseInitializer;
+import org.springframework.boot.sql.init.DatabaseInitializationMode;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
 
 /**
  * Initializer for Quartz Scheduler schema.
@@ -28,7 +34,7 @@ import org.springframework.util.Assert;
  * @author Vedran Pavic
  * @since 2.0.0
  */
-public class QuartzDatabaseInitializer extends AbstractDatabaseInitializer {
+public class QuartzDatabaseInitializer extends AbstractEnhancedDatabaseInitializer {
 
 	private final QuartzProperties properties;
 
@@ -41,21 +47,38 @@ public class QuartzDatabaseInitializer extends AbstractDatabaseInitializer {
 
 	@Override
 	protected boolean isEnabled() {
-		return this.properties.getInitializer().isEnabled();
+		DatabaseInitializationMode mode = this.properties.getJdbc().getInitializeSchema();
+		if (mode == DatabaseInitializationMode.NEVER) {
+			return false;
+		}
+		return mode == DatabaseInitializationMode.ALWAYS || isEmbeddedDatabase();
 	}
 
 	@Override
 	protected String getSchemaLocation() {
-		return this.properties.getSchema();
+		return this.properties.getJdbc().getSchema();
+	}
+
+	@Override
+	protected void customize(ResourceDatabasePopulator populator) {
+		List<String> commentPrefixes = this.properties.getJdbc().getCommentPrefix();
+		if (!ObjectUtils.isEmpty(commentPrefixes)) {
+			//populator.setCommentPrefixes(this.commentPrefixes.toArray(new String[0]));
+			populator.setCommentPrefix(commentPrefixes.get(0));
+		}
 	}
 
 	@Override
 	protected String getDatabaseName() {
+		String platform = this.properties.getJdbc().getPlatform();
+		if (StringUtils.hasText(platform)) {
+			return platform;
+		}
 		String databaseName = super.getDatabaseName();
 		if ("db2".equals(databaseName)) {
 			return "db2_v95";
 		}
-		if ("mysql".equals(databaseName)) {
+		if ("mysql".equals(databaseName) || "mariadb".equals(databaseName)) {
 			return "mysql_innodb";
 		}
 		if ("postgresql".equals(databaseName)) {
@@ -66,5 +89,4 @@ public class QuartzDatabaseInitializer extends AbstractDatabaseInitializer {
 		}
 		return databaseName;
 	}
-
 }

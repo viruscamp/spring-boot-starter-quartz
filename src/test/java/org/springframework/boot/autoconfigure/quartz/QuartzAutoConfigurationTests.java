@@ -83,6 +83,7 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withDatabase() throws Exception {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
 		registerAndRefresh(EmbeddedDataSourceConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class,
 				QuartzAutoConfiguration.class);
 		Scheduler scheduler = this.context.getBean(Scheduler.class);
@@ -98,15 +99,6 @@ public class QuartzAutoConfigurationTests {
 
 		assertThat(scheduler).isNotNull();
 		assertThat(scheduler.getMetaData().getJobStoreClass()).isAssignableFrom(RAMJobStore.class);
-	}
-
-	@Test
-	public void withTaskExecutor() throws Exception {
-		registerAndRefresh(QuartzAutoConfiguration.class, QuartzExecutorConfiguration.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
-
-		assertThat(scheduler).isNotNull();
-		assertThat(scheduler.getMetaData().getThreadPoolClass()).isEqualTo(LocalTaskExecutorThreadPool.class);
 	}
 
 	@Test

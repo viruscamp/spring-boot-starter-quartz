@@ -7,16 +7,15 @@
 		<version>1.5.22.RELEASE</version>
 		<relativePath/>
 	</parent>
+	<groupId>com.github.viruscamp</groupId>
 	<artifactId>spring-boot-starter-quartz</artifactId>
-	<name>Spring Boot Quartz Starter</name>
-	<description>Spring Boot Quartz Starter</description>
-	<url>http://projects.spring.io/spring-boot/</url>
-	<organization>
-		<name>Pivotal Software, Inc.</name>
-		<url>http://www.spring.io</url>
-	</organization>
+	<version>2.0.0</version>
+	<name>Spring Boot Quartz Starter for spring-boot-1.5.x</name>
+	<description>Spring Boot Quartz Starter for spring-boot-1.5.x, backport from spring-boot-2.6.6</description>
+	<url>https://github.com/viruscamp/spring-boot-starter-quartz</url>
+
 	<properties>
-		<main.basedir>${basedir}/../..</main.basedir>
+		<java.version>1.8</java.version>
 		<disable.checks>true</disable.checks>
 		<maven.site.skip>true</maven.site.skip>
 		<maven.site.deploy.skip>true</maven.site.deploy.skip>
@@ -35,6 +34,11 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-tx</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>org.quartz-scheduler</groupId>
@@ -59,11 +63,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-jdbc</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

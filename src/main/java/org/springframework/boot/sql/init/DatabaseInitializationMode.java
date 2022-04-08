@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,30 @@
  * limitations under the License.
  */
 
+package org.springframework.boot.sql.init;
+
 /**
- * Auto-configuration for Quartz Scheduler.
+ * Supported database initialization modes.
+ *
+ * @author Andy Wilkinson
+ * @since 2.5.1
+ * @see AbstractScriptDatabaseInitializer
  */
-package org.springframework.boot.autoconfigure.quartz;
+public enum DatabaseInitializationMode {
+
+	/**
+	 * Always initialize the database.
+	 */
+	ALWAYS,
+
+	/**
+	 * Only initialize an embedded database.
+	 */
+	EMBEDDED,
+
+	/**
+	 * Never initialize the database.
+	 */
+	NEVER
+
+}

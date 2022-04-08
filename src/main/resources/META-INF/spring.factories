@@ -1,1 +1,10 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration
+
+# Database Initializer Detectors
+org.springframework.boot.sql.init.dependency.DatabaseInitializerDetector=\
+org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializerDetector
+
+# Depends On Database Initialization Detectors
+org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitializationDetector=\
+org.springframework.boot.autoconfigure.quartz.SchedulerDependsOnDatabaseInitializationDetector
