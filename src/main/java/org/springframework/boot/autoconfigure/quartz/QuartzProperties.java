@@ -154,6 +154,7 @@ public class QuartzProperties {
 
 		/**
 		 * Prefixes for single-line comments in SQL initialization scripts.
+		 * In spring-boot-1.5.x, accepts a list of string, but only use the first one.
 		 */
 		private List<String> commentPrefix = new ArrayList<String>(Arrays.asList("#", "--"));
 
