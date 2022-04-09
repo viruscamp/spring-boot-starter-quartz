@@ -1,0 +1,28 @@
+{
+  "groups": [],
+  "properties": [
+    {
+      "name": "spring.quartz.jdbc.comment-prefix",
+      "defaultValue": [
+        "#",
+        "--"
+      ]
+    },
+    {
+      "name": "spring.quartz.jdbc.initialize-schema",
+      "defaultValue": "embedded"
+    },
+    {
+      "name": "spring.quartz.job-store-type",
+      "defaultValue": "memory"
+    },
+    {
+      "name": "spring.quartz.scheduler-name",
+      "defaultValue": "quartzScheduler"
+    },
+    {
+      "name": "spring.quartz.startup-delay",
+      "defaultValue": "0s"
+    }
+  ]
+}
