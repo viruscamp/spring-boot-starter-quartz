@@ -18,10 +18,10 @@ package org.springframework.boot.autoconfigure.quartz;
 
 import javax.sql.DataSource;
 
-import org.springframework.boot.autoconfigure.sql.init.AbstractEnhancedDatabaseInitializer;
+import org.springframework.boot.autoconfigure.AbstractDatabaseInitializerEnhanced;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulatorEnhanced;
 import org.springframework.boot.sql.init.DatabaseInitializationMode;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -33,8 +33,12 @@ import java.util.List;
  *
  * @author Vedran Pavic
  * @since 2.0.0
+ *
+ * Refactor to {@link QuartzDataSourceInitializer}
+ * and then deprecated since 2.6.0 for removal in 2.8.0 in favor of
+ * {@link QuartzDataSourceScriptDatabaseInitializer}
  */
-public class QuartzDatabaseInitializer extends AbstractEnhancedDatabaseInitializer {
+public class QuartzDatabaseInitializer extends AbstractDatabaseInitializerEnhanced {
 
 	private final QuartzProperties properties;
 
@@ -60,11 +64,10 @@ public class QuartzDatabaseInitializer extends AbstractEnhancedDatabaseInitializ
 	}
 
 	@Override
-	protected void customize(ResourceDatabasePopulator populator) {
+	protected void customize(ResourceDatabasePopulatorEnhanced populator) {
 		List<String> commentPrefixes = this.properties.getJdbc().getCommentPrefix();
 		if (!ObjectUtils.isEmpty(commentPrefixes)) {
-			//populator.setCommentPrefixes(this.commentPrefixes.toArray(new String[0]));
-			populator.setCommentPrefix(commentPrefixes.get(0));
+			populator.setCommentPrefixes(commentPrefixes.toArray(new String[0]));
 		}
 	}
 

@@ -16,5 +16,6 @@
 
 /**
  * Auto-configuration for Quartz Scheduler.
+ * copy from spring-boot-autoconfigure-2.6.6:\org\springframework\boot\autoconfigure\quartz\
  */
 package org.springframework.boot.autoconfigure.quartz;

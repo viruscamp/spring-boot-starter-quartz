@@ -15,9 +15,8 @@
  */
 
 // copy from spring-boot-autoconfigure-1.5.22.RELEASE:\org\springframework\boot\autoconfigure\AbstractDatabaseInitializer.java
-// add features from spring-boot-autoconfigure-2.6.6:org\springframework\boot\autoconfigure\quartz\jdbc\init\DataSourceScriptDatabaseInitializer.java
-// copy from spring-boot-autoconfigure-1.5.22.RELEASE:\org\springframework\boot\autoconfigure\AbstractDatabaseInitializer.java
-package org.springframework.boot.autoconfigure.sql.init;
+// add features from spring-boot-2.6.6:org\springframework\boot\jdbc\init\DataSourceScriptDatabaseInitializer.java
+package org.springframework.boot.autoconfigure;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,7 +25,7 @@ import org.springframework.boot.autoconfigure.quartz.QuartzDatabaseInitializer;
 import org.springframework.boot.jdbc.DatabaseDriver;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulatorEnhanced;
 import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.util.Assert;
@@ -35,8 +34,8 @@ import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
 
 /**
- * Copy from {@link org.springframework.boot.autoconfigure.AbstractDatabaseInitializer},
- * Add {@link #isEmbeddedDatabase()} and {@link #customize(ResourceDatabasePopulator)}
+ * Copy from {@link AbstractDatabaseInitializer},
+ * Add {@link #isEmbeddedDatabase()} and {@link #customize(ResourceDatabasePopulatorEnhanced)}
  *
  * Base class used for database initialization.
  *
@@ -44,7 +43,7 @@ import javax.sql.DataSource;
  * @author Stephane Nicoll
  * @since 1.5.0
  */
-public abstract class AbstractEnhancedDatabaseInitializer {
+public abstract class AbstractDatabaseInitializerEnhanced {
 
 	private static final Log logger = LogFactory.getLog(QuartzDatabaseInitializer.class);
 
@@ -54,7 +53,7 @@ public abstract class AbstractEnhancedDatabaseInitializer {
 
 	private final ResourceLoader resourceLoader;
 
-	protected AbstractEnhancedDatabaseInitializer(DataSource dataSource, ResourceLoader resourceLoader) {
+	protected AbstractDatabaseInitializerEnhanced(DataSource dataSource, ResourceLoader resourceLoader) {
 		Assert.notNull(dataSource, "DataSource must not be null");
 		Assert.notNull(resourceLoader, "ResourceLoader must not be null");
 		this.dataSource = dataSource;
@@ -76,7 +75,7 @@ public abstract class AbstractEnhancedDatabaseInitializer {
 		if (!isEnabled()) {
 			return;
 		}
-		ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+		ResourceDatabasePopulatorEnhanced populator = new ResourceDatabasePopulatorEnhanced();
 		String schemaLocation = getSchemaLocation();
 		if (schemaLocation.contains(PLATFORM_PLACEHOLDER)) {
 			String platform = getDatabaseName();
@@ -92,7 +91,7 @@ public abstract class AbstractEnhancedDatabaseInitializer {
 
 	protected abstract String getSchemaLocation();
 
-	protected void customize(ResourceDatabasePopulator populator) {
+	protected void customize(ResourceDatabasePopulatorEnhanced populator) {
 	}
 
 	protected String getDatabaseName() {
