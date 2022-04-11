@@ -34,7 +34,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link QuartzDatabaseInitializer}.
@@ -46,9 +46,8 @@ public class QuartzDatabaseInitializerTests {
 
 	public QuartzDatabaseInitializerTests() {
 		context = new AnnotationConfigApplicationContext();
-		EnvironmentTestUtils.addEnvironment(context,
-			"spring.datasource.url=" + String.format(
-						"jdbc:h2:mem:test-%s;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", UUID.randomUUID()));
+		EnvironmentTestUtils.addEnvironment(context, String.format(
+			"spring.datasource.url=jdbc:h2:mem:test-%s;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE", UUID.randomUUID()));
 		context.register(DataSourceAutoConfiguration.class, JdbcTemplateAutoConfiguration.class);
 	}
 
@@ -87,8 +86,8 @@ public class QuartzDatabaseInitializerTests {
 	private void assertThatDatabaseHasBeenInitialized() {
 		QuartzDatabaseInitializer quartzDatabaseInitializer = context.getBean(QuartzDatabaseInitializer.class);
 		assertThat(quartzDatabaseInitializer).isNotNull();
-		assertEquals(quartzDatabaseInitializer.isEnabled(), true);
-		assertEquals(quartzDatabaseInitializer.isEmbeddedDatabase(), true);
+		assertTrue(quartzDatabaseInitializer.isEnabled());
+		assertTrue(quartzDatabaseInitializer.isEmbeddedDatabase());
 
 		JdbcTemplate jdbcTemplate = context.getBean(JdbcTemplate.class);
 		assertThat(jdbcTemplate).isNotNull();
