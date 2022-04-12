@@ -38,11 +38,14 @@ public class QuartzProperties {
 
 	/**
 	 * Quartz job store type.
+	 * different behavior with spring-boot-2.x, `job-store-type=jdbc` without data-source will fail
 	 */
 	private JobStoreType jobStoreType = JobStoreType.MEMORY;
 
 	/**
 	 * Name of the scheduler.
+	 * Because there is a bug in spring-context-support-4.x {@link org.springframework.scheduling.quartz.SchedulerFactoryBean},
+	 * "spring.quartz.properties.org.quartz.scheduler.instanceName=testScheduler" is invalid.
 	 */
 	private String schedulerName;
 
@@ -55,6 +58,8 @@ public class QuartzProperties {
 	 * Delay after which the scheduler is started once initialization completes. Setting
 	 * this property makes sense if no jobs should be run before the entire application
 	 * has started up.
+	 * In spring-boot-1.5.x, `Duration` simple format like '1m', '3s' is not supported.
+	 * Only ISO-8601 format like 'PT1M', 'P2D' is supported.
 	 */
 	private Duration startupDelay = Duration.ofSeconds(0);
 

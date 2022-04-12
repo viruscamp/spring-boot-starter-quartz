@@ -22,7 +22,7 @@
     },
     {
       "name": "spring.quartz.startup-delay",
-      "defaultValue": "0s"
+      "defaultValue": "PT0S"
     }
   ]
 }

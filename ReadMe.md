@@ -7,6 +7,12 @@ This project is compatible for all spring-boot-1.5.x , you can change spring-boo
 
 Attentions:
 - The minimal java version is 1.8 instead of 1.6.
+- Different behavior with spring-boot-2.x, `job-store-type=jdbc` without data-source will fail
+- Because there is a bug in spring-context-support-4.x `SchedulerFactoryBean`,
+`spring.quartz.properties.org.quartz.scheduler.instanceName=testScheduler` is invalid,
+`spring.quartz.scheduler-name` can be used as an alternative.
+- In spring-boot-1.5.x, `Duration` simple format like '1m', '3s' is not supported.
+Only ISO-8601 format like 'PT1M', 'P2D' is supported.
 
 Main codes are from [spring-boot-autoconfigure/main/quartz](https://github.com/spring-projects/spring-boot/tree/v2.6.6/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/quartz) .
 

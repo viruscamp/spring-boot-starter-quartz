@@ -30,6 +30,7 @@ import org.quartz.impl.calendar.MonthlyCalendar;
 import org.quartz.impl.calendar.WeeklyCalendar;
 import org.quartz.simpl.RAMJobStore;
 
+import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +46,8 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.format.support.FormattingConversionService;
+import org.springframework.format.support.FormattingConversionServiceFactoryBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.quartz.LocalDataSourceJobStore;
@@ -282,15 +283,14 @@ public class QuartzAutoConfigurationTests {
 				properties.isOverwriteExistingJobs());
 	}
 
+	/**
+	 * in spring-context-4.x, the {@link org.springframework.format.datetime.standard.DurationFormatter}
+	 * does not support `Duration` simple format like '1m', '3s' etc.
+	 */
 	@Test
-	@Ignore // TODO remove
 	public void withCustomConfiguration() {
-		DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
-		context.getBeanFactory().setConversionService(conversionService);
-		context.getEnvironment().setConversionService(conversionService);
-
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.startup-delay=PT1M");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.auto-startup=false");
-		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.startup-delay=1m");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.wait-for-jobs-to-complete-on-shutdown=true");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.overwrite-existing-jobs=true");
 		registerAndRefresh();
@@ -421,6 +421,7 @@ public class QuartzAutoConfigurationTests {
 		if (autoConfigurations.length > 0) {
 			context.register(autoConfigurations);
 		}
+		context.register(ConversionServiceConfiguration.class);
 		context.register(QuartzAutoConfiguration.class);
 		context.refresh();
 	}
@@ -663,12 +664,16 @@ public class QuartzAutoConfigurationTests {
 		}
 	}
 
+	/**
+	 * spring-boot-1.5.x use {@link org.springframework.core.convert.support.DefaultConversionService} as bean 'conversionService',
+	 * which cannot converter {@link java.time.Duration} etc.
+	 * {@link org.springframework.format.support.DefaultFormattingConversionService} should be used.
+	 */
 	@Configuration
-	static class xx {
+	static class ConversionServiceConfiguration {
 		@Bean
-		public FormattingConversionService mvcConversionService() {
-			FormattingConversionService conversionService = new DefaultFormattingConversionService();
-			return conversionService;
+		public FactoryBean<FormattingConversionService> conversionService() {
+			return new FormattingConversionServiceFactoryBean();
 		}
 	}
 }
