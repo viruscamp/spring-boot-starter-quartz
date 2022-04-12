@@ -16,12 +16,13 @@
 
 package org.springframework.boot.autoconfigure.quartz;
 
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.Executor;
 
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.assertj.core.api.Assertions;
+import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.mockito.BDDMockito;
 import org.quartz.*;
@@ -29,12 +30,23 @@ import org.quartz.impl.calendar.MonthlyCalendar;
 import org.quartz.impl.calendar.WeeklyCalendar;
 import org.quartz.simpl.RAMJobStore;
 
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.*;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
 import org.springframework.boot.test.rule.OutputCapture;
 import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.format.support.DefaultFormattingConversionService;
+import org.springframework.format.support.FormattingConversionService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.quartz.LocalDataSourceJobStore;
@@ -72,21 +84,45 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withNoDataSource() throws Exception {
-		registerAndRefresh(QuartzAutoConfiguration.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		registerAndRefresh();
 
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
 		assertThat(scheduler).isNotNull();
 		assertThat(scheduler.getMetaData().getJobStoreClass()).isAssignableFrom(RAMJobStore.class);
 	}
 
+	/**
+	 * the old behavior, `job-store-type=jdbc` without data-source will pass
+	 * @throws Exception
+	 */
+	@Test
+	@Ignore
+	public void withNoDataSourceAndPropertyJdbcPassSilent() throws Exception {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		registerAndRefresh();
+
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		assertThat(scheduler).isNotNull();
+		assertThat(scheduler.getMetaData().getJobStoreClass()).isAssignableFrom(RAMJobStore.class);
+	}
+
+	/**
+	 * the new behavior, `job-store-type=jdbc` without data-source will fail
+	 */
+	@Test(expected = UnsatisfiedDependencyException.class)
+	public void withNoDataSourceAndPropertyJdbcShouldFail() {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		registerAndRefresh();
+	}
+
 	@Test
 	public void withDataSourceUseMemoryByDefault() throws Exception {
-		registerAndRefresh(
-				QuartzAutoConfiguration.class,
+		registerAutoConfigurations(
 				DataSourceAutoConfiguration.class,
 				DataSourceTransactionManagerAutoConfiguration.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		registerAndRefresh();
 
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
 		assertThat(scheduler).isNotNull();
 		assertThat(scheduler.getMetaData().getJobStoreClass()).isAssignableFrom(RAMJobStore.class);
 	}
@@ -94,35 +130,41 @@ public class QuartzAutoConfigurationTests {
 	@Test
 	public void withDataSource() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
-		registerAndRefresh(
-				QuartzJobsConfiguration.class,
+		registerAutoConfigurations(
 				DataSourceAutoConfiguration.class,
-				DataSourceTransactionManagerAutoConfiguration.class,
-				QuartzAutoConfiguration.class);
+				DataSourceTransactionManagerAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class);
+
 		assertDataSourceInitializedByDatabaseInitializer("dataSource");
 	}
 
+	/**
+	 * when {@link QuartzAutoConfiguration} is before {@link DataSourceAutoConfiguration}, it should not fail。
+	 * {@link AutoConfigureAfter} and {@link AutoConfigureBefore} should be valid only for
+	 * `EnableAutoConfiguration=QuartzAutoConfiguration` in file `spring.factories`.
+	 * So this test is not required.
+	 * @throws Exception
+	 */
 	@Test
 	@Ignore
-	public void withDataSourceChangeConfigurationOrder() throws Exception {
-		// when `QuartzAutoConfiguration` is before `DataSourceAutoConfiguration`, it should not fail
+	public void withDataSourceConfigOrder() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
-		registerAndRefresh(
-				QuartzAutoConfiguration.class,
-				QuartzJobsConfiguration.class,
+		registerAutoConfigurations(
 				DataSourceAutoConfiguration.class,
 				DataSourceTransactionManagerAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class);
+
 		assertDataSourceInitializedByDatabaseInitializer("dataSource");
 	}
 
 	@Test
 	public void withDataSourceAndInMemoryStoreDoesNotInitializeDataSource() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
-		registerAndRefresh(
-				QuartzJobsConfiguration.class,
+		registerAutoConfigurations(
 				DataSourceAutoConfiguration.class,
-				DataSourceTransactionManagerAutoConfiguration.class,
-				QuartzAutoConfiguration.class);
+				DataSourceTransactionManagerAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class);
+
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(context.getBean("dataSource", DataSource.class));
 		assertThat(jdbcTemplate.queryForList("SHOW TABLES").stream()
 				.map((table) -> (String) table.get("TABLE_NAME"))
@@ -132,10 +174,9 @@ public class QuartzAutoConfigurationTests {
 	@Test
 	public void withDataSourceNoTransactionManager() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
-		registerAndRefresh(
-				QuartzJobsConfiguration.class,
-				DataSourceAutoConfiguration.class,
-				QuartzAutoConfiguration.class);
+		registerAutoConfigurations(DataSourceAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class);
+
 		assertDataSourceInitializedByDatabaseInitializer("dataSource");
 	}
 
@@ -143,10 +184,8 @@ public class QuartzAutoConfigurationTests {
 	public void dataSourceWithQuartzDataSourceQualifierUsedWhenMultiplePresent() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.jdbc.comment-prefix=--,#");
-		registerAndRefresh(
-				QuartzJobsConfiguration.class,
-				MultipleDataSourceConfiguration.class,
-				QuartzAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class, MultipleDataSourceConfiguration.class);
+
 		assertDataSourceInitializedByDatabaseInitializer("quartzDataSource");
 	}
 
@@ -154,10 +193,8 @@ public class QuartzAutoConfigurationTests {
 	public void transactionManagerWithQuartzTransactionManagerUsedWhenMultiplePresent() {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.jdbc.comment-prefix=--,#");
-		registerAndRefresh(
-				QuartzJobsConfiguration.class,
-				MultipleTransactionManagersConfiguration.class,
-				QuartzAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class, MultipleTransactionManagersConfiguration.class);
+
 		SchedulerFactoryBean schedulerFactoryBean = context.getBean(SchedulerFactoryBean.class);
 		assertThat(schedulerFactoryBean).isNotNull();
 		assertThat(schedulerFactoryBean)
@@ -168,7 +205,7 @@ public class QuartzAutoConfigurationTests {
 	@Test
 	public void withTaskExecutor() throws SchedulerException {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.properties.org.quartz.threadPool.threadCount=50");
-		registerAndRefresh(QuartzAutoConfiguration.class, MockExecutorConfiguration.class);
+		registerAndRefresh(MockExecutorConfiguration.class);
 
 		Scheduler scheduler = context.getBean(Scheduler.class);
 		assertThat(scheduler).isNotNull();assertThat(scheduler.getMetaData().getThreadPoolSize()).isEqualTo(50);
@@ -179,7 +216,7 @@ public class QuartzAutoConfigurationTests {
 	@Test
 	public void withOverwriteExistingJobs() throws SchedulerException {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.overwrite-existing-jobs=true");
-		registerAndRefresh(QuartzAutoConfiguration.class, OverwriteTriggerConfiguration.class);
+		registerAndRefresh(OverwriteTriggerConfiguration.class);
 
 		Scheduler scheduler = context.getBean(Scheduler.class);
 		assertThat(scheduler).isNotNull();
@@ -191,9 +228,9 @@ public class QuartzAutoConfigurationTests {
 	@Test
 	public void withConfiguredJobAndTrigger() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "test-name=withConfiguredJobAndTrigger");
-		registerAndRefresh(QuartzAutoConfiguration.class, QuartzFullConfiguration.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		registerAndRefresh(QuartzFullConfiguration.class);
 
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
 		assertThat(scheduler.getJobDetail(JobKey.jobKey("fooJob"))).isNotNull();
 		assertThat(scheduler.getTrigger(TriggerKey.triggerKey("fooTrigger"))).isNotNull();
 		Thread.sleep(1000L);
@@ -203,9 +240,9 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withConfiguredCalendars() throws Exception {
-		registerAndRefresh(QuartzAutoConfiguration.class, QuartzCalendarsConfiguration.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		registerAndRefresh(QuartzCalendarsConfiguration.class);
 
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
 		assertThat(scheduler.getCalendar("weekly")).isNotNull();
 		assertThat(scheduler.getCalendar("monthly")).isNotNull();
 	}
@@ -213,25 +250,179 @@ public class QuartzAutoConfigurationTests {
 	@Test
 	public void withQuartzProperties() throws Exception {
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.properties.org.quartz.scheduler.instanceId=FOO");
-		registerAndRefresh(QuartzAutoConfiguration.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		registerAndRefresh();
 
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
 		assertThat(scheduler).isNotNull();
 		assertThat(scheduler.getSchedulerInstanceId()).isEqualTo("FOO");
 	}
 
 	@Test
 	public void withCustomizer() throws Exception {
-		registerAndRefresh(QuartzAutoConfiguration.class, QuartzCustomConfig.class);
-		Scheduler scheduler = this.context.getBean(Scheduler.class);
+		registerAndRefresh(QuartzCustomConfig.class);
 
+		Scheduler scheduler = this.context.getBean(Scheduler.class);
 		assertThat(scheduler).isNotNull();
 		assertThat(scheduler.getSchedulerName()).isEqualTo("fooScheduler");
 	}
 
-	private void registerAndRefresh(Class<?>... annotatedClasses) {
-		this.context.register(annotatedClasses);
-		this.context.refresh();
+	@Test
+	public void validateDefaultProperties() {
+		registerAndRefresh(ManualSchedulerConfiguration.class);
+
+		SchedulerFactoryBean schedulerFactory = context.getBean(SchedulerFactoryBean.class);
+		assertThat(schedulerFactory).isNotNull();
+		QuartzProperties properties = new QuartzProperties();
+		assertThat(properties.isAutoStartup()).isEqualTo(schedulerFactory.isAutoStartup());
+		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("startupDelay",
+				(int) properties.getStartupDelay().getSeconds());
+		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("waitForJobsToCompleteOnShutdown",
+				properties.isWaitForJobsToCompleteOnShutdown());
+		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("overwriteExistingJobs",
+				properties.isOverwriteExistingJobs());
+	}
+
+	@Test
+	@Ignore // TODO remove
+	public void withCustomConfiguration() {
+		DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
+		context.getBeanFactory().setConversionService(conversionService);
+		context.getEnvironment().setConversionService(conversionService);
+
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.auto-startup=false");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.startup-delay=1m");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.wait-for-jobs-to-complete-on-shutdown=true");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.overwrite-existing-jobs=true");
+		registerAndRefresh();
+
+		SchedulerFactoryBean schedulerFactory = context.getBean(SchedulerFactoryBean.class);
+		assertThat(schedulerFactory).isNotNull();
+		assertThat(schedulerFactory.isAutoStartup()).isFalse();
+		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("startupDelay", 60);
+		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("waitForJobsToCompleteOnShutdown", true);
+		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("overwriteExistingJobs", true);
+	}
+
+	@Test
+	public void withLiquibase() throws Exception {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.jdbc.initialize-schema=never");
+		EnvironmentTestUtils.addEnvironment(context, "liquibase.change-log=classpath:org/quartz/impl/jdbcjobstore/liquibase.quartz.init.xml");
+		registerAutoConfigurations(
+				DataSourceAutoConfiguration.class,
+				DataSourceTransactionManagerAutoConfiguration.class,
+				LiquibaseAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class);
+		assertDataSourceInitialized("dataSource");
+		assertNotHaveBean(context, QuartzDatabaseInitializer.class);
+	}
+
+	@Test
+	public void withFlyway() throws Exception {
+		Path flywayLocation = Files.createTempDirectory("starter-quartz-tests-");
+		flywayLocation.toFile().deleteOnExit();
+		ClassPathResource tablesResource = new ClassPathResource("org/quartz/impl/jdbcjobstore/tables_h2.sql");
+		try (InputStream stream = tablesResource.getInputStream()) {
+			Path flywaySqlFile = flywayLocation.resolve("V2__quartz.sql");
+			Files.copy(stream, flywaySqlFile);
+			flywaySqlFile.toFile().deleteOnExit();
+		}
+
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.jdbc.initialize-schema=never");
+		EnvironmentTestUtils.addEnvironment(context, "flyway.locations=filesystem:" + flywayLocation);
+		EnvironmentTestUtils.addEnvironment(context, "flyway.baseline-on-migrate=true");
+		registerAutoConfigurations(
+				DataSourceAutoConfiguration.class,
+				DataSourceTransactionManagerAutoConfiguration.class,
+				FlywayAutoConfiguration.class);
+		registerAndRefresh(QuartzJobsConfiguration.class);
+
+		assertDataSourceInitialized("dataSource");
+		assertNotHaveBean(context, QuartzDatabaseInitializer.class);
+	}
+
+	@Test
+	public void schedulerNameWithDedicatedProperty() {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.scheduler-name=testScheduler");
+		registerAndRefresh();
+		assertSchedulerName("testScheduler");
+	}
+
+	/**
+	 * in spring-context-support-4.x, the {@link SchedulerFactoryBean}
+	 * use {@link SchedulerFactoryBean#schedulerName} as {@link SchedulerFactoryBean#setBeanName(String)}.
+	 * With {@link QuartzProperties#schedulerName} == null, the {@link org.springframework.beans.factory.BeanNameAware}
+	 * use {@link SchedulerFactoryBean#setBeanName(String)} to set {@link SchedulerFactoryBean#schedulerName}.
+	 * Cause the property "spring.quartz.properties.org.quartz.scheduler.instanceName=testScheduler" useless.
+	 */
+	@Test
+	@Ignore
+	public void schedulerNameWithQuartzProperty() {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.properties.org.quartz.scheduler.instanceName=testScheduler");
+		registerAndRefresh();
+		SchedulerFactoryBean schedulerFactory = context.getBean(SchedulerFactoryBean.class);
+		QuartzProperties quartzProperties = context.getBean(QuartzProperties.class);
+		assertSchedulerName("testScheduler");
+	}
+
+	@Test
+	public void schedulerNameWithDedicatedPropertyTakesPrecedence() {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.scheduler-name=specificTestScheduler");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.properties.org.quartz.scheduler.instanceName=testScheduler");
+		registerAndRefresh();
+		assertSchedulerName("specificTestScheduler");
+	}
+
+	@Test
+	public void schedulerNameUseBeanNameByDefault() {
+		registerAndRefresh();
+		assertSchedulerName("quartzScheduler");
+	}
+
+	@Test
+	public void whenTheUserDefinesTheirOwnQuartzDatabaseInitializerThenTheAutoConfiguredInitializerBacksOff() {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		registerAutoConfigurations(
+				DataSourceAutoConfiguration.class,
+				DataSourceTransactionManagerAutoConfiguration.class);
+		registerAndRefresh(CustomQuartzDatabaseInitializerConfiguration.class);
+
+		assertThat(context.getBean(QuartzDatabaseInitializer.class)).isNotNull();
+		assertNotHaveBean(context, "quartzDatabaseInitializer");
+		assertThat(context.getBean("customInitializer")).isNotNull();
+	}
+
+	@Test
+	public void whenTheUserDefinesTheirOwnDatabaseInitializerThenTheAutoConfiguredQuartzInitializerRemains() {
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		registerAutoConfigurations(
+				DataSourceAutoConfiguration.class,
+				DataSourceTransactionManagerAutoConfiguration.class);
+		registerAndRefresh(CustomDatabaseInitializerConfiguration.class);
+
+		assertThat(context.getBean(QuartzDatabaseInitializer.class)).isNotNull();
+		assertThat(context.getBean("customInitializer")).isNotNull();
+	}
+
+	private Class<?>[] autoConfigurations = new Class<?>[0];
+	// register system Configurations
+	private void registerAutoConfigurations(Class<?>... autoConfigurations) {
+		//context.register(autoConfigurations);
+		this.autoConfigurations = autoConfigurations;
+	}
+
+	// register user Configurations and then refresh
+	private void registerAndRefresh(Class<?>... userConfigurations) {
+		EnvironmentTestUtils.addEnvironment(context, "spring.datasource.generate-unique-name=true");
+		if (userConfigurations.length > 0) {
+			context.register(userConfigurations);
+		}
+		if (autoConfigurations.length > 0) {
+			context.register(autoConfigurations);
+		}
+		context.register(QuartzAutoConfiguration.class);
+		context.refresh();
 	}
 
 	private void assertDataSourceInitialized(String dataSourceName) throws Exception {
@@ -248,9 +439,7 @@ public class QuartzAutoConfigurationTests {
 	private void assertDataSourceInitializedByDatabaseInitializer(
 			String dataSourceName) throws Exception {
 		assertDataSourceInitialized(dataSourceName);
-
-		QuartzDatabaseInitializer initializer = context
-				.getBean(QuartzDatabaseInitializer.class);
+		QuartzDatabaseInitializer initializer = context.getBean(QuartzDatabaseInitializer.class);
 		assertThat(initializer).isNotNull();
 		assertThat(initializer).hasFieldOrPropertyWithValue("dataSource", context.getBean(dataSourceName));
 	}
@@ -261,9 +450,28 @@ public class QuartzAutoConfigurationTests {
 		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("schedulerName", schedulerName);
 	}
 
-	@Configuration
-	protected static class QuartzJobsConfiguration {
+	private static void assertNotHaveBean(ApplicationContext context, Class<?> beanType) {
+		Assertions.assertThatThrownBy(() -> context.getBean(beanType))
+				.isInstanceOf(NoSuchBeanDefinitionException.class);
+	}
 
+	private static void assertNotHaveBean(ApplicationContext context, String beanName) {
+		Assertions.assertThatThrownBy(() -> context.getBean(beanName))
+				.isInstanceOf(NoSuchBeanDefinitionException.class);
+	}
+
+	/**
+	 *  Ensure that userConfigurations are before autoConfigurations, to override DataSource etc.
+	 *  But in spring-boot-1.5, {@link ComponentThatUsesScheduler} cannot get an initialized {@link Scheduler}.
+	 *  So we should bypass it.
+	 */
+	@Configuration
+	//@Import(ComponentThatUsesScheduler.class)
+	static class BaseQuartzConfiguration {
+	}
+
+	@Configuration
+	protected static class QuartzJobsConfiguration extends BaseQuartzConfiguration {
 		@Bean
 		JobDetail fooJob() {
 			return JobBuilder.newJob().ofType(FooJob.class).withIdentity("fooJob").storeDurably().build();
@@ -273,12 +481,10 @@ public class QuartzAutoConfigurationTests {
 		JobDetail barJob() {
 			return JobBuilder.newJob().ofType(FooJob.class).withIdentity("barJob").storeDurably().build();
 		}
-
 	}
 
 	@Configuration
-	protected static class QuartzFullConfiguration {
-
+	protected static class QuartzFullConfiguration extends BaseQuartzConfiguration {
 		@Bean
 		public JobDetail fooJob() {
 			return JobBuilder.newJob().ofType(FooJob.class).withIdentity("fooJob")
@@ -293,35 +499,11 @@ public class QuartzAutoConfigurationTests {
 			return TriggerBuilder.newTrigger().forJob(jobDetail).withIdentity("fooTrigger")
 					.withSchedule(scheduleBuilder).build();
 		}
-
-	}
-
-	@Configuration
-	protected static class QuartzCalendarsConfiguration {
-
-		@Bean
-		public Calendar weekly() {
-			return new WeeklyCalendar();
-		}
-
-		@Bean
-		public Calendar monthly() {
-			return new MonthlyCalendar();
-		}
-
-	}
-
-	@Configuration
-	static class MockExecutorConfiguration {
-		@Bean
-		Executor executor() {
-			return mock(Executor.class);
-		}
 	}
 
 	@Configuration
 	@Import(QuartzFullConfiguration.class)
-	static class OverwriteTriggerConfiguration {
+	static class OverwriteTriggerConfiguration extends BaseQuartzConfiguration {
 		@Bean
 		Trigger anotherFooTrigger(JobDetail fooJob) {
 			SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(30)
@@ -333,8 +515,28 @@ public class QuartzAutoConfigurationTests {
 	}
 
 	@Configuration
-	protected static class QuartzCustomConfig {
+	protected static class QuartzCalendarsConfiguration extends BaseQuartzConfiguration {
+		@Bean
+		public Calendar weekly() {
+			return new WeeklyCalendar();
+		}
 
+		@Bean
+		public Calendar monthly() {
+			return new MonthlyCalendar();
+		}
+	}
+
+	@Configuration
+	static class MockExecutorConfiguration extends BaseQuartzConfiguration {
+		@Bean
+		Executor executor() {
+			return mock(Executor.class);
+		}
+	}
+
+	@Configuration
+	protected static class QuartzCustomConfig extends BaseQuartzConfiguration {
 		@Bean
 		public SchedulerFactoryBeanCustomizer customizer() {
 			return new SchedulerFactoryBeanCustomizer() {
@@ -346,27 +548,16 @@ public class QuartzAutoConfigurationTests {
 		}
 	}
 
-	public static class FooJob extends QuartzJobBean {
-
-		@Autowired
-		private Environment env;
-
-		private String jobDataKey;
-
-		@Override
-		protected void executeInternal(JobExecutionContext context) {
-			System.out.println(this.env.getProperty("test-name", "unknown") + " - " + this.jobDataKey);
+	@Configuration
+	static class ManualSchedulerConfiguration {
+		@Bean
+		SchedulerFactoryBean quartzScheduler() {
+			return new SchedulerFactoryBean();
 		}
-
-		public void setJobDataKey(String jobDataKey) {
-			this.jobDataKey = jobDataKey;
-		}
-
 	}
 
 	@Configuration
-	protected static class MultipleDataSourceConfiguration {
-
+	protected static class MultipleDataSourceConfiguration extends BaseQuartzConfiguration {
 		@Bean
 		@Primary
 		DataSource applicationDataSource() throws Exception {
@@ -388,7 +579,7 @@ public class QuartzAutoConfigurationTests {
 	}
 
 	@Configuration
-	protected static class MultipleTransactionManagersConfiguration {
+	protected static class MultipleTransactionManagersConfiguration extends BaseQuartzConfiguration {
 
 		private final DataSource primaryDataSource = createTestDataSource();
 
@@ -428,6 +619,56 @@ public class QuartzAutoConfigurationTests {
 				throw new RuntimeException(ex);
 			}
 			return properties.initializeDataSourceBuilder().build();
+		}
+	}
+
+	@Configuration
+	static class CustomQuartzDatabaseInitializerConfiguration {
+		@Bean
+		QuartzDatabaseInitializer customInitializer(DataSource dataSource,
+				ResourceLoader resourceLoader, QuartzProperties properties) {
+			return new QuartzDatabaseInitializer(dataSource, resourceLoader, properties);
+		}
+	}
+
+	@Configuration
+	static class CustomDatabaseInitializerConfiguration {
+		@Bean
+		QuartzDatabaseInitializer customInitializer(
+				DataSource dataSource, ResourceLoader resourceLoader) {
+			return new QuartzDatabaseInitializer(dataSource, resourceLoader, new QuartzProperties());
+		}
+	}
+
+	static class ComponentThatUsesScheduler {
+		ComponentThatUsesScheduler(Scheduler scheduler) {
+			Assert.assertNotNull("Scheduler must not be null", scheduler);
+		}
+	}
+
+	public static class FooJob extends QuartzJobBean {
+
+		@Autowired
+		private Environment env;
+
+		private String jobDataKey;
+
+		@Override
+		protected void executeInternal(JobExecutionContext context) {
+			System.out.println(this.env.getProperty("test-name", "unknown") + " - " + this.jobDataKey);
+		}
+
+		public void setJobDataKey(String jobDataKey) {
+			this.jobDataKey = jobDataKey;
+		}
+	}
+
+	@Configuration
+	static class xx {
+		@Bean
+		public FormattingConversionService mvcConversionService() {
+			FormattingConversionService conversionService = new DefaultFormattingConversionService();
+			return conversionService;
 		}
 	}
 }

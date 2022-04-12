@@ -108,7 +108,7 @@ public class QuartzAutoConfiguration {
 	@Configuration
 	@Scope(proxyMode = ScopedProxyMode.NO)
 	@AutoConfigureBefore(QuartzAutoConfiguration.class)
-	@ConditionalOnSingleCandidate(DataSource.class)
+	//@ConditionalOnSingleCandidate(DataSource.class) // make it fail at `job-store-type=jdbc` without data-source
 	@ConditionalOnProperty(prefix = "spring.quartz", name = "job-store-type", havingValue = "jdbc")
 	protected static class JdbcStoreTypeConfiguration {
 
