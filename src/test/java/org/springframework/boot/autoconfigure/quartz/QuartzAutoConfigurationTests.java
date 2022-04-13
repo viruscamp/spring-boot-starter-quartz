@@ -22,7 +22,6 @@ import java.util.concurrent.Executor;
 
 import org.apache.commons.io.FileUtils;
 import org.assertj.core.api.Assertions;
-import org.assertj.core.api.ThrowableAssert;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.mockito.BDDMockito;
@@ -54,6 +53,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.quartz.LocalDataSourceJobStore;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
@@ -203,11 +203,8 @@ public class QuartzAutoConfigurationTests {
 
 		SchedulerFactoryBean schedulerFactoryBean = context.getBean(SchedulerFactoryBean.class);
 		assertThat(schedulerFactoryBean).isNotNull();
-		/*
-		assertThat(schedulerFactoryBean)
-				.hasFieldOrPropertyWithValue("transactionManager",
+		assertHasFieldWithValue(schedulerFactoryBean, "transactionManager",
 				context.getBean("quartzTransactionManager"));
-		 */
 	}
 
 	@Test
@@ -282,14 +279,12 @@ public class QuartzAutoConfigurationTests {
 		assertThat(schedulerFactory).isNotNull();
 		QuartzProperties properties = new QuartzProperties();
 		assertThat(properties.isAutoStartup()).isEqualTo(schedulerFactory.isAutoStartup());
-		/*
-		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("startupDelay",
+		assertHasFieldWithValue(schedulerFactory, "startupDelay",
 				(int) properties.getStartupDelay().getStandardSeconds());
-		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("waitForJobsToCompleteOnShutdown",
+		assertHasFieldWithValue(schedulerFactory, "waitForJobsToCompleteOnShutdown",
 				properties.isWaitForJobsToCompleteOnShutdown());
-		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("overwriteExistingJobs",
+		assertHasFieldWithValue(schedulerFactory, "overwriteExistingJobs",
 				properties.isOverwriteExistingJobs());
-		*/
 	}
 
 	/**
@@ -307,9 +302,9 @@ public class QuartzAutoConfigurationTests {
 		SchedulerFactoryBean schedulerFactory = context.getBean(SchedulerFactoryBean.class);
 		assertThat(schedulerFactory).isNotNull();
 		assertThat(schedulerFactory.isAutoStartup()).isFalse();
-		//assertThat(schedulerFactory).hasFieldOrPropertyWithValue("startupDelay", 60);
-		//assertThat(schedulerFactory).hasFieldOrPropertyWithValue("waitForJobsToCompleteOnShutdown", true);
-		//assertThat(schedulerFactory).hasFieldOrPropertyWithValue("overwriteExistingJobs", true);
+		assertHasFieldWithValue(schedulerFactory, "startupDelay", 60);
+		assertHasFieldWithValue(schedulerFactory, "waitForJobsToCompleteOnShutdown", true);
+		assertHasFieldWithValue(schedulerFactory, "overwriteExistingJobs", true);
 	}
 
 	@Test
@@ -450,13 +445,13 @@ public class QuartzAutoConfigurationTests {
 		assertDataSourceInitialized(dataSourceName);
 		QuartzDatabaseInitializer initializer = context.getBean(QuartzDatabaseInitializer.class);
 		assertThat(initializer).isNotNull();
-		//assertThat(initializer).hasFieldOrPropertyWithValue("dataSource", context.getBean(dataSourceName));
+		assertHasFieldWithValue(initializer, "dataSource", context.getBean(dataSourceName));
 	}
 
 	private void assertSchedulerName(String schedulerName) {
 		SchedulerFactoryBean schedulerFactory = context.getBean(SchedulerFactoryBean.class);
 		assertThat(schedulerFactory).isNotNull();
-		//assertThat(schedulerFactory).hasFieldOrPropertyWithValue("schedulerName", schedulerName);
+		assertHasFieldWithValue(schedulerFactory, "schedulerName", schedulerName);
 	}
 
 	private static void assertNotHaveBean(final ApplicationContext context, final Class<?> beanType) {
@@ -477,6 +472,17 @@ public class QuartzAutoConfigurationTests {
 			return;
 		}
 		Assertions.fail("should throw NoSuchBeanDefinitionException");
+	}
+
+	/**
+	 * as an alternative to `assertThat(obj).hasFieldOrPropertyWithValue(field, val)`
+	 */
+	private static void assertHasFieldWithValue(final Object obj, String field, Object expected) {
+		try {
+			Assert.assertEquals(expected, ReflectionTestUtils.getField(obj, field));
+		} catch (Throwable ex) {
+			Assertions.fail("error reading field: " + field, ex);
+		}
 	}
 
 	/**
