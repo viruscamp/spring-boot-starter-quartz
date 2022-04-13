@@ -6,11 +6,13 @@ This is backport of spring-boot-starter-quartz from spring-boot-2.6.6 to spring-
 This project is compatible for all spring-boot-1.5.x , you can change spring-boot version by change `project.parent.version` int pom.xml .
 
 This branch is java-1.6 version.
+
+Usage:
 ```xml
 <dependency>
 	<groupId>com.github.viruscamp</groupId>
 	<artifactId>spring-boot-starter-quartz-java6</artifactId>
-	<version>2.0.1</version>
+	<version>2.0.2</version>
 </dependency>
 ```
 
