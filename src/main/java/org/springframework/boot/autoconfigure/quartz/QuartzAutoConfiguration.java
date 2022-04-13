@@ -71,7 +71,7 @@ public class QuartzAutoConfiguration {
 			schedulerFactoryBean.setSchedulerName(properties.getSchedulerName());
 		}
 		schedulerFactoryBean.setAutoStartup(properties.isAutoStartup());
-		schedulerFactoryBean.setStartupDelay((int) properties.getStartupDelay().getSeconds());
+		schedulerFactoryBean.setStartupDelay((int) properties.getStartupDelay().getStandardSeconds());
 		schedulerFactoryBean.setWaitForJobsToCompleteOnShutdown(properties.isWaitForJobsToCompleteOnShutdown());
 		schedulerFactoryBean.setOverwriteExistingJobs(properties.isOverwriteExistingJobs());
 		if (!properties.getProperties().isEmpty()) {

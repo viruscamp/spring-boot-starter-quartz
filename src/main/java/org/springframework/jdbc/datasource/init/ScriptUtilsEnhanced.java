@@ -249,7 +249,7 @@ public abstract class ScriptUtilsEnhanced {
 				separator = FALLBACK_STATEMENT_SEPARATOR;
 			}
 
-			List<String> statements = new ArrayList<>();
+			List<String> statements = new ArrayList<String>();
 			splitSqlScript(resource, script, separator, commentPrefixes, blockCommentStartDelimiter,
 					blockCommentEndDelimiter, statements);
 
@@ -326,8 +326,14 @@ public abstract class ScriptUtilsEnhanced {
 	static String readScript(EncodedResource resource, String separator,
 			String[] commentPrefixes, String blockCommentEndDelimiter) throws IOException {
 
-		try (LineNumberReader lnr = new LineNumberReader(resource.getReader())) {
+		LineNumberReader lnr = null;
+		try {
+			lnr = new LineNumberReader(resource.getReader());
 			return readScript(lnr, commentPrefixes, separator, blockCommentEndDelimiter);
+		} finally {
+			if (lnr != null) {
+				lnr.close();
+			}
 		}
 	}
 

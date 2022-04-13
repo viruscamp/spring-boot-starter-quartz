@@ -16,12 +16,13 @@
 
 package org.springframework.boot.autoconfigure.quartz;
 
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
+import org.apache.commons.io.FileUtils;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.ThrowableAssert;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.mockito.BDDMockito;
@@ -160,16 +161,20 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withDataSourceAndInMemoryStoreDoesNotInitializeDataSource() throws Exception {
-		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=memory");
 		registerAutoConfigurations(
 				DataSourceAutoConfiguration.class,
 				DataSourceTransactionManagerAutoConfiguration.class);
 		registerAndRefresh(QuartzJobsConfiguration.class);
 
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(context.getBean("dataSource", DataSource.class));
-		assertThat(jdbcTemplate.queryForList("SHOW TABLES").stream()
-				.map((table) -> (String) table.get("TABLE_NAME"))
-				.noneMatch((name) -> name.startsWith("QRTZ")));
+		assertThat(jdbcTemplate.queryForList("SHOW TABLES"))
+				.areNot(new org.assertj.core.api.Condition<Map<String, Object>>() {
+					public boolean matches(Map<String, Object> table) {
+						String name = (String) table.get("TABLE_NAME");
+						return name.startsWith("QRTZ");
+					}
+				});
 	}
 
 	@Test
@@ -276,7 +281,7 @@ public class QuartzAutoConfigurationTests {
 		QuartzProperties properties = new QuartzProperties();
 		assertThat(properties.isAutoStartup()).isEqualTo(schedulerFactory.isAutoStartup());
 		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("startupDelay",
-				(int) properties.getStartupDelay().getSeconds());
+				(int) properties.getStartupDelay().getStandardSeconds());
 		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("waitForJobsToCompleteOnShutdown",
 				properties.isWaitForJobsToCompleteOnShutdown());
 		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("overwriteExistingJobs",
@@ -289,7 +294,7 @@ public class QuartzAutoConfigurationTests {
 	 */
 	@Test
 	public void withCustomConfiguration() {
-		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.startup-delay=PT1M");
+		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.startup-delay=PT60S");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.auto-startup=false");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.wait-for-jobs-to-complete-on-shutdown=true");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.overwrite-existing-jobs=true");
@@ -319,14 +324,13 @@ public class QuartzAutoConfigurationTests {
 
 	@Test
 	public void withFlyway() throws Exception {
-		Path flywayLocation = Files.createTempDirectory("starter-quartz-tests-");
-		flywayLocation.toFile().deleteOnExit();
+		File flywayLocation = FileUtils.getFile(FileUtils.getTempDirectory(), "starter-quartz-tests-");
+		flywayLocation.mkdirs();
+		flywayLocation.deleteOnExit();
 		ClassPathResource tablesResource = new ClassPathResource("org/quartz/impl/jdbcjobstore/tables_h2.sql");
-		try (InputStream stream = tablesResource.getInputStream()) {
-			Path flywaySqlFile = flywayLocation.resolve("V2__quartz.sql");
-			Files.copy(stream, flywaySqlFile);
-			flywaySqlFile.toFile().deleteOnExit();
-		}
+		File flywaySqlFile = FileUtils.getFile(flywayLocation, "V2__quartz.sql");
+		FileUtils.copyToFile(tablesResource.getInputStream(), flywaySqlFile);
+		flywaySqlFile.deleteOnExit();
 
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.job-store-type=jdbc");
 		EnvironmentTestUtils.addEnvironment(context, "spring.quartz.jdbc.initialize-schema=never");
@@ -451,13 +455,21 @@ public class QuartzAutoConfigurationTests {
 		assertThat(schedulerFactory).hasFieldOrPropertyWithValue("schedulerName", schedulerName);
 	}
 
-	private static void assertNotHaveBean(ApplicationContext context, Class<?> beanType) {
-		Assertions.assertThatThrownBy(() -> context.getBean(beanType))
+	private static void assertNotHaveBean(final ApplicationContext context, final Class<?> beanType) {
+		Assertions.assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+			public void call() throws Throwable {
+				context.getBean(beanType);
+			}
+		})
 				.isInstanceOf(NoSuchBeanDefinitionException.class);
 	}
 
-	private static void assertNotHaveBean(ApplicationContext context, String beanName) {
-		Assertions.assertThatThrownBy(() -> context.getBean(beanName))
+	private static void assertNotHaveBean(final ApplicationContext context, final String beanName) {
+		Assertions.assertThatThrownBy(new ThrowableAssert.ThrowingCallable() {
+			public void call() throws Throwable {
+				context.getBean(beanName);
+			}
+		})
 				.isInstanceOf(NoSuchBeanDefinitionException.class);
 	}
 

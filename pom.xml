@@ -8,7 +8,7 @@
 		<relativePath/>
 	</parent>
 	<groupId>com.github.viruscamp</groupId>
-	<artifactId>spring-boot-starter-quartz</artifactId>
+	<artifactId>spring-boot-starter-quartz-java6</artifactId>
 	<version>2.0.1</version>
 	<name>Spring Boot Quartz Starter for spring-boot-1.5.x</name>
 	<description>Spring Boot Quartz Starter for spring-boot-1.5.x, backport from spring-boot-2.6.6</description>
@@ -23,12 +23,13 @@
 	</distributionManagement>
 
 	<properties>
-		<java.version>1.8</java.version>
+		<java.version>1.6</java.version>
 		<disable.checks>true</disable.checks>
 		<maven.site.skip>true</maven.site.skip>
 		<maven.site.deploy.skip>true</maven.site.deploy.skip>
 
-		<quartz.version>2.3.2</quartz.version>
+		<quartz.version>2.2.3</quartz.version>
+		<commons-io.version>2.5</commons-io.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -67,7 +68,12 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		
+
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-configuration-processor</artifactId>
@@ -104,6 +110,12 @@
 					<artifactId>jaxb-api</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

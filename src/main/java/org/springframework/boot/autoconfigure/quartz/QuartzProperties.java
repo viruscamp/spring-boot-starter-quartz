@@ -16,7 +16,7 @@
 
 package org.springframework.boot.autoconfigure.quartz;
 
-import java.time.Duration;
+import org.joda.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -61,7 +61,7 @@ public class QuartzProperties {
 	 * In spring-boot-1.5.x, `Duration` simple format like '1m', '3s' is not supported.
 	 * Only ISO-8601 format like 'PT1M', 'P2D' is supported.
 	 */
-	private Duration startupDelay = Duration.ofSeconds(0);
+	private Duration startupDelay = Duration.ZERO;
 
 	/**
 	 * Whether to wait for running jobs to complete on shutdown.
