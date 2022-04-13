@@ -25,6 +25,7 @@ import javax.sql.DataSource;
 import org.quartz.*;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -61,9 +62,11 @@ public class QuartzAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	public SchedulerFactoryBean quartzScheduler(QuartzProperties properties,
-			ObjectProvider<List<SchedulerFactoryBeanCustomizer>> customizers1,
-			ObjectProvider<JobDetail[]> jobDetails1, ObjectProvider<Map<String, Calendar>> calendars1,
-			ObjectProvider<Trigger[]> triggers1, ApplicationContext applicationContext) {
+			@Autowired(required = false) List<SchedulerFactoryBeanCustomizer> customizers,
+			@Autowired(required = false) List<JobDetail> jobDetails,
+			@Autowired(required = false) Map<String, Calendar> calendars,
+			@Autowired(required = false) List<Trigger> triggers,
+			ApplicationContext applicationContext) {
 		SchedulerFactoryBean schedulerFactoryBean = new SchedulerFactoryBean();
 		SpringBeanJobFactory jobFactory = new AutowireCapableBeanJobFactory(applicationContext.getAutowireCapableBeanFactory());
 		schedulerFactoryBean.setJobFactory(jobFactory);
@@ -77,19 +80,15 @@ public class QuartzAutoConfiguration {
 		if (!properties.getProperties().isEmpty()) {
 			schedulerFactoryBean.setQuartzProperties(asProperties(properties.getProperties()));
 		}
-		JobDetail[] jobDetails = jobDetails1.getIfAvailable();
-		if (jobDetails != null && jobDetails.length > 0) {
-			schedulerFactoryBean.setJobDetails(jobDetails);
+		if (jobDetails != null && !jobDetails.isEmpty()) {
+			schedulerFactoryBean.setJobDetails(jobDetails.toArray(new JobDetail[0]));
 		}
-		Map<String, Calendar> calendars = calendars1.getIfAvailable();
 		if (calendars != null && !calendars.isEmpty()) {
 			schedulerFactoryBean.setCalendars(calendars);
 		}
-		Trigger[] triggers = triggers1.getIfAvailable();
-		if (triggers != null && triggers.length > 0) {
-			schedulerFactoryBean.setTriggers(triggers);
+		if (triggers != null && !triggers.isEmpty()) {
+			schedulerFactoryBean.setTriggers(triggers.toArray(new Trigger[0]));
 		}
-		List<SchedulerFactoryBeanCustomizer> customizers = customizers1.getIfAvailable();
 		if (customizers != null) {
 			AnnotationAwareOrderComparator.sort(customizers);
 			for (SchedulerFactoryBeanCustomizer customizer : customizers) {

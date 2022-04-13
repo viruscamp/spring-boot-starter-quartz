@@ -5,6 +5,15 @@
 This is backport of spring-boot-starter-quartz from spring-boot-2.6.6 to spring-boot-1.5.x .  
 This project is compatible for all spring-boot-1.5.x , you can change spring-boot version by change `project.parent.version` int pom.xml .
 
+Usage:
+```xml
+<dependency>
+	<groupId>com.github.viruscamp</groupId>
+	<artifactId>spring-boot-starter-quartz</artifactId>
+	<version>2.0.2</version>
+</dependency>
+```
+
 Attentions:
 - The minimal java version is 1.8 instead of 1.6.
 - Different behavior with spring-boot-2.x, `job-store-type=jdbc` without data-source will fail
